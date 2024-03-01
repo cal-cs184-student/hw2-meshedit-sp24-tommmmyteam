@@ -112,9 +112,116 @@ namespace CGL
 
   EdgeIter HalfedgeMesh::flipEdge( EdgeIter e0 )
   {
-    // TODO Part 4.
-    // This method should flip the given edge and return an iterator to the flipped edge.
-    return EdgeIter();
+    // Checking if boundary
+    if (e0->isBoundary()) {
+      return e0;
+    }
+
+    // Faces
+    FaceIter f0 = e0->halfedge()->face();
+    FaceIter f1 = e0->halfedge()->twin()->face();
+
+    // Half Edges
+    HalfedgeIter h0 = e0->halfedge();
+    HalfedgeIter h1 = h0->next();
+    HalfedgeIter h2 = h1->next();
+
+    HalfedgeIter h3 = h0->twin();
+    HalfedgeIter h4 = h3->next();
+    HalfedgeIter h5 = h4->next();
+ 
+    // Vertices of the triangles
+    VertexIter a = h0->next()->next()->vertex();
+    VertexIter b = h0->vertex();
+    VertexIter c = h3->vertex();
+    VertexIter d = h3->next()->next()->vertex(); 
+
+    // Reassign next pointers to reroute the half-edge loop
+    h0->next() = h5;
+    h5->next() = h2;
+    h2->next() = h0;
+
+    h1->next() = h3;
+    h3->next() = h4;
+    h4->next() = h1;
+
+    // Update half-edge on vertex pointers
+    a->halfedge() = h2;
+    b->halfedge() = h4;
+    c->halfedge() = h1;
+    d->halfedge() = h5;
+
+    // Update half-edge on face pointers
+    f0->halfedge() = h0;
+    f1->halfedge() = h3;
+
+    // Update half-edge on edge pointers (not necessary)
+
+    /////////////////////////////////////////////////////////////
+
+    // Update vertex pointers on half-edges
+    h0->vertex() = a;
+    h3->vertex() = d;
+
+    // Update face pointers on half-edges
+    h5->face() = f0;
+    h2->face() = f1;
+    
+    // Update edge pointers on half-edges (not necessary)
+
+    // Update twin pointers on half-edges (not necessary)
+
+    // Update next pointers on half-edges
+    h0->next() = h5;
+    h5->next() = h1;
+    h1->next() = h0;
+
+    h3->next() = h2;
+    h2->next() = h4;
+    h4->next() = h3;
+
+    return e0;
+
+    // FaceIter f0 = e0->halfedge()->face();
+    // FaceIter f1 = e0->halfedge()->twin()->face();
+
+    // // Setting correct vertices halfedge pointers
+    // // "a" and "d" does not change, since we are only adding potential half-edges, not removing
+    // e0->halfedge()->next()->vertex()->halfedge() = e0->halfedge()->next(); // for "c"
+    // e0->halfedge()->vertex()->halfedge() = e0->halfedge()->twin()->next(); // For "b"
+
+    // // Setting correct edge halfedge pointers
+    // // No need?
+
+    // // Setting correct face halfedge pointers
+    // e0->halfedge()->face()->halfedge() = e0->halfedge(); // for f0
+    // e0->halfedge()->twin()->face()->halfedge() = e0->halfedge()->twin(); // for f1
+
+    // // Setting correct halfedge face pointer
+    // e0->halfedge()->next()->next()->face() = f1; // for "ab"
+    // e0->halfedge()->twin()->next()->next()->face() = f0; // for "cd"
+
+    // // Setting correct halfedge next pointers
+    // HalfedgeIter e0_halfedge_next_new = e0->halfedge()->twin()->next()->next();
+    // VertexIter e0_vertex_new = e0->halfedge()->next()->next()->vertex();
+
+    // HalfedgeIter e0_halfedge_twin_next_new = e0->halfedge()->next()->next();
+    // VertexIter e0_vertex_twin_new = e0->halfedge()->twin()->next()->next()->vertex();
+    
+    // e0->halfedge()->next()->next() = e0->halfedge();  // for "ca"
+    // e0->halfedge()->next()->next()->next() = e0->halfedge()->twin()->next(); // for "ab"
+    // e0->halfedge()->twin()->next()->next() = e0->halfedge()->twin(); // for "bd"
+    // e0->halfedge()->twin()->next()->next()->next() = e0->halfedge()->next(); // for "dc"
+
+    // // Setting current halfedge / twin parameters
+    // e0->halfedge()->next() = e0_halfedge_next_new;
+    // e0->halfedge()->twin()->next() = e0_halfedge_twin_next_new;
+
+    // e0->halfedge()->vertex() = e0_vertex_new;
+    // e0->halfedge()->twin()->vertex() = e0_vertex_twin_new;
+
+    // // This method should flip the given edge and return an iterator to the flipped edge.
+    // return e0;
   }
 
   VertexIter HalfedgeMesh::splitEdge( EdgeIter e0 )
