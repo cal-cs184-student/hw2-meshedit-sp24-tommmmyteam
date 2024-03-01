@@ -16,7 +16,12 @@ namespace CGL
   std::vector<Vector2D> BezierCurve::evaluateStep(std::vector<Vector2D> const &points)
   { 
     // TODO Part 1.
-    return std::vector<Vector2D>();
+    std::vector<Vector2D> intermediates = std::vector<Vector2D>();
+    for (int i = 0; i < points.size() - 1; i++) {
+      intermediates.push_back((1 - t) * points[i] + t * points[i + 1]);
+    }
+
+    return intermediates;
   }
 
   /**
@@ -30,7 +35,12 @@ namespace CGL
   std::vector<Vector3D> BezierPatch::evaluateStep(std::vector<Vector3D> const &points, double t) const
   {
     // TODO Part 2.
-    return std::vector<Vector3D>();
+    std::vector<Vector3D> intermediates = std::vector<Vector3D>();
+    for (int i = 0; i < points.size() - 1; i++) {
+      intermediates.push_back((1 - t) * points[i] + t * points[i + 1]);
+    }
+
+    return intermediates;
   }
 
   /**
@@ -43,7 +53,12 @@ namespace CGL
   Vector3D BezierPatch::evaluate1D(std::vector<Vector3D> const &points, double t) const
   {
     // TODO Part 2.
-    return Vector3D();
+    std::vector<Vector3D> result = points;
+    do {
+      result = evaluateStep(result, t);
+    } while (result.size() > 1);
+
+    return result[0];
   }
 
   /**
@@ -55,8 +70,12 @@ namespace CGL
    */
   Vector3D BezierPatch::evaluate(double u, double v) const 
   {  
-    // TODO Part 2.
-    return Vector3D();
+    std::vector<Vector3D> u_intermediates;
+    for (int i = 0; i < controlPoints.size(); i++) {
+      u_intermediates.push_back(evaluate1D(controlPoints[i], u));
+    }
+
+    return evaluate1D(u_intermediates, v);
   }
 
   Vector3D Vertex::normal( void ) const
@@ -65,7 +84,30 @@ namespace CGL
     // Returns an approximate unit normal at this vertex, computed by
     // taking the area-weighted average of the normals of neighboring
     // triangles, then normalizing.
-    return Vector3D();
+    HalfedgeCIter h = this->halfedge();
+
+    Vector3D unit_normal = Vector3D();
+
+    do {
+      // h_twin is a halfedge of the current triangle
+      HalfedgeCIter h_twin = h->twin();
+
+      // v0, v1, v2 are the vertices of the current triangle
+      VertexCIter v0 = h_twin->vertex();
+      VertexCIter v1 = h_twin->next()->vertex();
+      VertexCIter v2 = h_twin->next()->next()->vertex();
+
+      // n is the normal of the current triangle
+      Vector3D n = cross(v1->position - v0->position, v2->position - v1->position);
+
+      // Adding the normal of the current triangle to the sum
+      unit_normal += n;
+
+      // Moving to the next halfedge of the current triangle
+      h = h_twin->next();
+    } while (h != this->halfedge());
+
+    return unit_normal.unit();
   }
 
   EdgeIter HalfedgeMesh::flipEdge( EdgeIter e0 )
