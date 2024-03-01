@@ -136,15 +136,6 @@ namespace CGL
     VertexIter c = h3->vertex();
     VertexIter d = h3->next()->next()->vertex(); 
 
-    // Reassign next pointers to reroute the half-edge loop
-    h0->next() = h5;
-    h5->next() = h2;
-    h2->next() = h0;
-
-    h1->next() = h3;
-    h3->next() = h4;
-    h4->next() = h1;
-
     // Update half-edge on vertex pointers
     a->halfedge() = h2;
     b->halfedge() = h4;
@@ -181,47 +172,6 @@ namespace CGL
     h4->next() = h3;
 
     return e0;
-
-    // FaceIter f0 = e0->halfedge()->face();
-    // FaceIter f1 = e0->halfedge()->twin()->face();
-
-    // // Setting correct vertices halfedge pointers
-    // // "a" and "d" does not change, since we are only adding potential half-edges, not removing
-    // e0->halfedge()->next()->vertex()->halfedge() = e0->halfedge()->next(); // for "c"
-    // e0->halfedge()->vertex()->halfedge() = e0->halfedge()->twin()->next(); // For "b"
-
-    // // Setting correct edge halfedge pointers
-    // // No need?
-
-    // // Setting correct face halfedge pointers
-    // e0->halfedge()->face()->halfedge() = e0->halfedge(); // for f0
-    // e0->halfedge()->twin()->face()->halfedge() = e0->halfedge()->twin(); // for f1
-
-    // // Setting correct halfedge face pointer
-    // e0->halfedge()->next()->next()->face() = f1; // for "ab"
-    // e0->halfedge()->twin()->next()->next()->face() = f0; // for "cd"
-
-    // // Setting correct halfedge next pointers
-    // HalfedgeIter e0_halfedge_next_new = e0->halfedge()->twin()->next()->next();
-    // VertexIter e0_vertex_new = e0->halfedge()->next()->next()->vertex();
-
-    // HalfedgeIter e0_halfedge_twin_next_new = e0->halfedge()->next()->next();
-    // VertexIter e0_vertex_twin_new = e0->halfedge()->twin()->next()->next()->vertex();
-    
-    // e0->halfedge()->next()->next() = e0->halfedge();  // for "ca"
-    // e0->halfedge()->next()->next()->next() = e0->halfedge()->twin()->next(); // for "ab"
-    // e0->halfedge()->twin()->next()->next() = e0->halfedge()->twin(); // for "bd"
-    // e0->halfedge()->twin()->next()->next()->next() = e0->halfedge()->next(); // for "dc"
-
-    // // Setting current halfedge / twin parameters
-    // e0->halfedge()->next() = e0_halfedge_next_new;
-    // e0->halfedge()->twin()->next() = e0_halfedge_twin_next_new;
-
-    // e0->halfedge()->vertex() = e0_vertex_new;
-    // e0->halfedge()->twin()->vertex() = e0_vertex_twin_new;
-
-    // // This method should flip the given edge and return an iterator to the flipped edge.
-    // return e0;
   }
 
   VertexIter HalfedgeMesh::splitEdge( EdgeIter e0 )
@@ -229,7 +179,91 @@ namespace CGL
     // TODO Part 5.
     // This method should split the given edge and return an iterator to the newly inserted vertex.
     // The halfedge of this vertex should point along the edge that was split, rather than the new edges.
-    return VertexIter();
+    
+    if (e0->halfedge()->face()->isBoundary() || e0->halfedge()->twin()->face()->isBoundary()) {
+        return VertexIter(); // Early return if edge is a boundary edge
+    }
+
+    // Faces
+    FaceIter f0 = e0->halfedge()->face();
+    FaceIter f1 = e0->halfedge()->twin()->face();
+
+    // Half Edges
+    HalfedgeIter h0 = e0->halfedge();
+    HalfedgeIter h1 = h0->next();
+    HalfedgeIter h2 = h1->next();
+
+    HalfedgeIter h3 = h0->twin();
+    HalfedgeIter h4 = h3->next();
+    HalfedgeIter h5 = h4->next();
+ 
+    // Vertices of the triangles
+    VertexIter a = h0->next()->next()->vertex();
+    VertexIter b = h0->vertex();
+    VertexIter c = h3->vertex();
+    VertexIter d = h3->next()->next()->vertex(); 
+
+    // Creating new mesh elements
+    VertexIter m = newVertex();
+    EdgeIter e1 = newEdge();
+    EdgeIter e2 = newEdge();
+    EdgeIter e3 = newEdge();
+    FaceIter f2 = newFace();
+    FaceIter f3 = newFace();
+    HalfedgeIter h6 = newHalfedge();
+    HalfedgeIter h7 = newHalfedge();
+    HalfedgeIter h8 = newHalfedge();
+    HalfedgeIter h9 = newHalfedge();
+    HalfedgeIter h10 = newHalfedge();
+    HalfedgeIter h11 = newHalfedge();
+
+
+    // Setting the new vertex position to the midpoint
+    m->position = (b->position + c->position) / 2.0;
+
+    // Update half-edge on vertex pointers
+    m->halfedge() = h0;
+    c->halfedge() = h1;
+    a->halfedge() = h2;
+    b->halfedge() = h4;
+    d->halfedge() = h5;
+
+    // Update half-edge on face pointers
+    f0->halfedge() = h1;
+    f1->halfedge() = h5;
+    f2->halfedge() = h2;
+    f3->halfedge() = h4;
+
+    // Update half-edge on edge pointers
+    e0->halfedge() = h0;
+    e1->halfedge() = h6;
+    e2->halfedge() = h8;
+    e3->halfedge() = h10;
+
+    e0->isNew = false;
+    e1->isNew = true;
+    e2->isNew = false;
+    e3->isNew = true;
+
+    // Updated half edges
+    // next, twin, vertex, edge, face
+    h0->setNeighbors(h1, h3, m, e0, f0);
+    h1->setNeighbors(h6, h1->twin(), c, h1->edge(), f0);
+    h6->setNeighbors(h0, h7, a, e1, f0);
+
+    h3->setNeighbors(h11, h0, c, e0, f1);
+    h11->setNeighbors(h5, h10, m, e3, f1); 
+    h5->setNeighbors(h3, h5->twin(), d, h5->edge(), f1);
+
+    h8->setNeighbors(h7, h9, b, e2, f2);
+    h7->setNeighbors(h2, h6, m, e1, f2);
+    h2->setNeighbors(h8, h2->twin(), a, h2->edge(), f2);
+
+    h9->setNeighbors(h4, h8, m, e2, f3);
+    h4->setNeighbors(h10, h4->twin(), b, h4->edge(), f3);
+    h10->setNeighbors(h9, h11, d, e3, f3);
+
+    return m;
   }
 
 
@@ -255,5 +289,66 @@ namespace CGL
 
     // 5. Copy the new vertex positions into final Vertex::position.
 
+    for (VertexIter v = mesh.verticesBegin(); v != mesh.verticesEnd(); v++) {
+      v->isNew = false;
+
+      Size n = v->degree();
+      double u = (n == 3) ? 3.0 / 16.0 : 3.0 / (8.0 * n);
+      
+      Vector3D neighbor_sum = Vector3D();
+      HalfedgeIter h = v->halfedge();
+      do {
+        neighbor_sum += h->twin()->vertex()->position;
+        h = h->twin()->next();
+      } while (h != v->halfedge());
+
+      v->newPosition = (1 - n * u) * v->position + u * neighbor_sum;
+    }
+
+    for (EdgeIter e = mesh.edgesBegin(); e != mesh.edgesEnd(); e++) {
+      e->isNew = false;
+
+      HalfedgeIter h0 = e->halfedge();
+      HalfedgeIter h1 = h0->twin();
+
+      VertexIter a = h0->vertex();
+      VertexIter b = h1->vertex();
+      VertexIter c = h0->next()->next()->vertex();
+      VertexIter d = h1->next()->next()->vertex();
+
+      e->newPosition = 0.375 * (a->position + b->position) + 0.125 * (c->position + d->position);
+    }
+
+    std::vector<EdgeIter> originalEdges;
+    for (EdgeIter e = mesh.edgesBegin(); e != mesh.edgesEnd(); ++e) {
+        originalEdges.push_back(e);
+        e->isNew = false; // Mark original edges as not new
+    }
+
+
+    for (EdgeIter e : originalEdges) {
+        VertexIter newVertex = mesh.splitEdge(e);
+        newVertex->isNew = true; // Mark the new vertex as new
+        // Set the new vertex position immediately after splitting
+        newVertex->position = e->newPosition;
+    }
+
+
+    for (EdgeIter e = mesh.edgesBegin(); e != mesh.edgesEnd(); e++) {
+      if (e->isNew) {
+        VertexIter a = e->halfedge()->vertex();
+        VertexIter b = e->halfedge()->twin()->vertex();
+
+        if ((a->isNew && !b->isNew) || (!a->isNew && b->isNew)) {
+          mesh.flipEdge(e);
+        }
+      }
+    }
+
+    for (VertexIter v = mesh.verticesBegin(); v != mesh.verticesEnd(); v++) {
+      if (!v->isNew) {
+        v->position = v->newPosition;
+      }
+    }
   }
 }
